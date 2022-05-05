@@ -31,8 +31,7 @@ ament_export_include_directories(include)
 add_executable(engine_ctrl_solution
   src/engine_ctrl_solution.cpp
   src/engine_simulator.cpp
-  src/tutorial_timer.cpp
-  src/tutorial_trigger_timer.cpp
+  src/engine_timer.cpp
   src/main.cpp
 )
 

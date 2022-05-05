@@ -7,7 +7,7 @@
 #ifndef ENGINE_SIMULATOR_H
 #define ENGINE_SIMULATOR_H
 
-#include "tutorial_trigger_timer.h"
+#include "engine_timer.h"
 #include <string>
 #include <functional>
 #include <mutex>
@@ -46,7 +46,7 @@ namespace hek_tutorials
     private:    // Functions
 
     private:    // Variables
-        TutorialTriggerTimer m_trigger_timer;
+        EngineTimer m_trigger_timer;
         rpm_callback_t m_rpm_callback;
         std::mutex m_mutex;
         std::atomic_int32_t m_rpm;

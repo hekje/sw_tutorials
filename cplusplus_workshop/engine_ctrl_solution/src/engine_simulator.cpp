@@ -26,7 +26,7 @@ namespace hek_tutorials
         m_engine_state{SimState::STOPPED}
     {
         m_trigger_timer.set_timer_callback(std::bind(&EngineSimulator::timer_callback, this));
-        m_trigger_timer.start_timer(TRIGGER_TIMER_TIMEOUT_MS);
+        m_trigger_timer.start_timer(TRIGGER_TIMER_TIMEOUT_MS, true);
         SLLog::log_info("Started EngineSimulator");
     }
 

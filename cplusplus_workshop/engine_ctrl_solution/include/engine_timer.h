@@ -4,8 +4,8 @@
 *
 *****************************************************************************/
 
-#ifndef TUTORIAL_TRIGGER_TIMER_H
-#define TUTORIAL_TRIGGER_TIMER_H
+#ifndef ENGINE_TIMER_H
+#define ENGINE_TIMER_H
 
 
 #include <thread>
@@ -20,19 +20,24 @@ namespace hek_tutorials
 {
     using timeout_callback_t = std::function<void(void)>;
 
-    class TutorialTriggerTimer
+    class EngineTimer
     {
     public:
-        TutorialTriggerTimer();
-        virtual ~TutorialTriggerTimer();
+        EngineTimer();
+        virtual ~EngineTimer();
 
         void set_timer_callback(timeout_callback_t callback);
         void unset_timer_callback();
-        void start_timer(const uint32_t timeout_ms);
+        void start_timer(uint32_t timeout_ms,
+                         bool repeat = false);
         void stop_timer();
 
     private:
-        void run_timer(const uint32_t timeout_ms);
+        // Timer that runs once
+        void run_timer(uint32_t timeout_ms);
+
+        // Timer that runs continuously and notifies observer after each run
+        void run_trigger_timer(uint32_t timeout_ms);
 
     private:
         std::atomic_bool m_continue_timer;
@@ -45,4 +50,4 @@ namespace hek_tutorials
 
 } // namespace hek_tutorials
 
-#endif // TUTORIAL_TRIGGER_TIMER_H
+#endif // ENGINE_TIMER_H

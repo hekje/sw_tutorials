@@ -19,7 +19,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <memory>
-#include "tutorial_timer.h"
+#include "engine_timer.h"
 
 
 /// ----------------------------------------------------------------------------
@@ -123,7 +123,7 @@ namespace hek_tutorials
         // State machine
         std::mutex m_engine_state_mutex;
         EngineState m_engine_state;
-        TutorialTimer m_timer;
+        EngineTimer m_timer;
 
     };  // class EngineCtrlSolution
 
