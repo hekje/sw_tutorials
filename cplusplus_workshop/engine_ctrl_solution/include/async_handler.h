@@ -35,13 +35,18 @@ namespace hek_tutorials
             SLLog::log_info("AsyncHandler::~AsyncHandler - AsyncHandler terminated gracefully");
         }
 
-        virtual void handle_trigger_action(T& t) = 0;
+        //! This is not a pure virtual function, as this function is called in the running thread:
+        //! In case the child is already distructed, but the AsyncHandler parent is still alive,
+        //! the application will crash with a "pure virtual method called" exception
+        virtual void handle_trigger_action(T& t) { (void) t; }
 
 
     protected:
         void
         trigger_handler_thread(const T& trigger_action_struct)
         {
+            if (!m_handle_thread_running) {  return; }
+
             {   // Scope for mutex
                 std::unique_lock<std::mutex> lk(m_handle_thread_mutex);
                 m_trigger_action_queue.push(trigger_action_struct);
