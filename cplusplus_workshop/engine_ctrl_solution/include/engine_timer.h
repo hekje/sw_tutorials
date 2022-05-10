@@ -8,6 +8,7 @@
 #define ENGINE_TIMER_H
 
 
+#include "async_handler.h"
 #include <thread>
 #include <atomic>
 #include <mutex>
@@ -20,11 +21,36 @@ namespace hek_tutorials
 {
     using timeout_callback_t = std::function<void(void)>;
 
-    class EngineTimer
+    enum class TimerRequest
+    {
+        undefined = 0,
+        req_start_timer,
+        req_stop_timer,
+    };
+
+    struct CallbackActionTimer
+    {
+        TimerRequest type = TimerRequest::undefined;
+        uint32_t timeout_ms = 0;
+        bool repeat = false;
+
+        bool operator==(const CallbackActionTimer& other) const
+        {
+            return (type == other.type &&
+                    timeout_ms == other.timeout_ms &&
+                    repeat == other.repeat
+                    );
+        }
+    };
+
+
+    class EngineTimer : public AsyncHandler<struct CallbackActionTimer>
     {
     public:
         EngineTimer();
         virtual ~EngineTimer();
+
+        void handle_trigger_action(struct CallbackActionTimer& action) override;
 
         void set_timer_callback(timeout_callback_t callback);
         void unset_timer_callback();
@@ -33,6 +59,11 @@ namespace hek_tutorials
         void stop_timer();
 
     private:
+        void async_start_timer(uint32_t timeout_ms,
+                               bool repeat = false);
+
+        void async_stop_timer();
+
         // Timer that runs once
         void run_timer(uint32_t timeout_ms);
 

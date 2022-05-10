@@ -17,6 +17,7 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(GTest REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
@@ -25,7 +26,8 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 
 
-include_directories(include)
+include_directories(include
+    ${GTEST_INCLUDE_DIR})
 ament_export_include_directories(include)
 
 add_executable(engine_ctrl_solution
@@ -58,3 +60,20 @@ if(BUILD_TESTING)
 endif()
 
 ament_package()
+
+
+# test
+FILE(GLOB TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/unittests/*.cpp)
+
+add_executable(gtest_${PROJECT_NAME}
+    ${TEST_SOURCES}
+    src/engine_timer.cpp
+)
+
+target_link_libraries(gtest_${PROJECT_NAME}
+    gtest gtest_main pthread
+    ${JSONCPP_LIBRARIES}
+)
+add_test(NAME gtest_${PROJECT_NAME}
+    COMMAND gtest_${PROJECT_NAME}
+)
