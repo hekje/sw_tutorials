@@ -22,7 +22,8 @@ namespace hek_tutorials
     class AsyncHandler
     {
     public:
-        AsyncHandler()
+        AsyncHandler() :
+            m_handle_thread_running{false}
         {
             start_handle_thread();
 
