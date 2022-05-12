@@ -48,7 +48,7 @@ namespace hek_tutorials
         // First stop the Parent
         stop();
 
-        m_timer.stop_timer();
+        m_timer.req_timer_stop();
         m_timer.unset_timer_callback();
         m_engine_simulator.unset_rpm_callback();
         SLLog::log_info("Engine Ctrl terminated gracefully...");
@@ -132,7 +132,7 @@ namespace hek_tutorials
 
                 // Start timer: before timeout, the rpm should be high enough
                 // so the starter motor can be switched OFF
-                m_timer.start_timer(ENGINE_CRANK_TIMEOUT_MS);
+                m_timer.req_timer_start(ENGINE_CRANK_TIMEOUT_MS);
             }
         }
         break;
@@ -159,7 +159,7 @@ namespace hek_tutorials
                 // Evaluate if the rpm exceeded the threshold value
                 if (std::abs(action.rpm) >= std::abs(CRANK_RPM_THRESHOLD)) {
                     // First, stop the current timer
-                    m_timer.stop_timer();
+                    m_timer.req_timer_stop();
 
                     SLLog::log_info("ENGINE STATE [CRANKING] - Stop cranking");
                     m_engine_simulator.stop_cranking();
@@ -212,7 +212,7 @@ namespace hek_tutorials
         SLLog::log_info("EngineCtrlSolution::stop_engine - Enter function");
 
         // First, stop the current timer
-        m_timer.stop_timer();
+        m_timer.req_timer_stop();
 
         // Stop engine
         m_engine_simulator.stop_engine();

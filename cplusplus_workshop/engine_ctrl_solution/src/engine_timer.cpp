@@ -33,25 +33,41 @@ namespace hek_tutorials
     EngineTimer::handle_trigger_action(struct CallbackActionTimer& action)
     {
         switch (action.type) {
-            case TimerRequest::req_start_timer:
-                async_start_timer(action.timeout_ms,
-                                  action.repeat);
+        case TimerRequest::req_start_timer:
+            start_timer(action.timeout_ms, action.repeat);
             break;
 
-            case TimerRequest::req_stop_timer:
-                async_stop_timer();
+        case TimerRequest::req_stop_timer:
+            stop_timer();
             break;
 
-            case TimerRequest::undefined:
-            default:
-                break;
+        case TimerRequest::undefined:
+        default:
+            break;
         }
     }
 
 
     void
-    EngineTimer::start_timer(uint32_t timeout_ms,
-                          bool repeat)
+    EngineTimer::req_timer_start(uint32_t timeout_ms, bool repeat)
+    {
+        // Check mutex: if it is locked, it is likely that this function
+        // was called from a callback function =>
+        // handle asynchronously to prevent deadlock
+        if (m_mutex.try_lock()) {
+            // No conflict: just start the timer
+            m_mutex.unlock();
+            start_timer(timeout_ms, repeat);
+            return;
+        }
+
+        // Lock is held by another process
+        req_timer_start_from_callback(timeout_ms, repeat);
+    }
+
+
+    void
+    EngineTimer::req_timer_start_from_callback(uint32_t timeout_ms, bool repeat)
     {
         // Trigger this action to be handled on a different thread, so this function can return immediately
         // (for example, when called from inside a callback function from this class)
@@ -64,27 +80,39 @@ namespace hek_tutorials
 
 
     void
-    EngineTimer::async_start_timer(uint32_t timeout_ms,
-                                bool repeat)
+    EngineTimer::start_timer(uint32_t timeout_ms, bool repeat)
     {
         // Terminate thread first if already running
-        async_stop_timer();
+        stop_timer();
 
         {
             std::lock_guard<std::mutex> lck(m_mutex);
             m_continue_timer.store(true);
         }
-        m_handler_thread = (repeat) ? (std::thread(&EngineTimer::run_trigger_timer,
-                                                   this,
-                                                   timeout_ms)) :
-                                      (std::thread(&EngineTimer::run_timer,
-                                                   this,
-                                                   timeout_ms));
+        m_handler_thread =
+            (repeat) ? (std::thread(&EngineTimer::run_trigger_timer, this, timeout_ms)) : (std::thread(&EngineTimer::run_timer, this, timeout_ms));
+    }
+
+    void
+    EngineTimer::req_timer_stop()
+    {
+        // Check mutex: if it is locked, it is likely that this function
+        // was called from a callback function =>
+        // handle asynchronously to prevent deadlock
+        if (m_mutex.try_lock()) {
+            // No conflict: just stop the timer
+            m_mutex.unlock();
+            stop_timer();
+            return;
+        }
+
+        // Lock is held by another process
+        req_timer_stop_from_callback();
     }
 
 
     void
-    EngineTimer::stop_timer()
+    EngineTimer::req_timer_stop_from_callback()
     {
         // Trigger this action to be handled on a different thread, so this function can return immediately
         // (for example, when called from inside a callback function from this class)
@@ -95,7 +123,7 @@ namespace hek_tutorials
 
 
     void
-    EngineTimer::async_stop_timer()
+    EngineTimer::stop_timer()
     {
         {
             std::lock_guard<std::mutex> lck(m_mutex);
@@ -109,15 +137,15 @@ namespace hek_tutorials
         }
     }
 
-
-    void EngineTimer::set_timer_callback(timeout_callback_t callback)
+    void
+    EngineTimer::set_timer_callback(timeout_callback_t callback)
     {
         std::lock_guard<std::mutex> lck(m_timeout_callback_mutex);
         m_timeout_callback = callback;
     }
 
-
-    void EngineTimer::unset_timer_callback()
+    void
+    EngineTimer::unset_timer_callback()
     {
         std::lock_guard<std::mutex> lck(m_timeout_callback_mutex);
         m_timeout_callback = nullptr;
@@ -129,41 +157,33 @@ namespace hek_tutorials
     //! Timer that runs only once, notifies observer and then terminates
     //! \param timeout_ms
     //!
-    void EngineTimer::run_timer(uint32_t timeout_ms)
+    void
+    EngineTimer::run_timer(uint32_t timeout_ms)
     {
         //! lock mutex => check predicate => IF predicate == false => wait ELSE continue program
         std::unique_lock<std::mutex> lock(m_mutex);
-        if (m_timer_condition.wait_for(lock,
-                                       std::chrono::milliseconds(timeout_ms),
-                                       [this]{return (!m_continue_timer.load());})) {
-
+        if (m_timer_condition.wait_for(lock, std::chrono::milliseconds(timeout_ms), [this] { return (!m_continue_timer.load()); })) {
             // Condition variable was signalled to wake up from its waiting state
-            if (!m_continue_timer.load()) {
-                SLLog::log_info("EngineTimer::run_timer - timer interrupted, terminating thread");
-                return;
-            }
+            SLLog::log_info("EngineTimer::run_timer - timer interrupted, terminating thread");
+            return;
         }
-
-        // We used a unique_lock, so we can unlock here:
-        // This prevents the horrible and dangerous thing that inside the callback function,
-        // another function could be called that uses the same "m_mutex" (eg start_timer).
-        // => deadlock
-        lock.unlock();
 
         // Timeout: notify subscriber
         std::lock_guard<std::mutex> lck(m_timeout_callback_mutex);
-        if (m_timeout_callback) { m_timeout_callback(); }
+        if (m_timeout_callback) {
+            m_timeout_callback();
+        }
 
         SLLog::log_info("EngineTimer::run_timer - Terminating thread...");
     }
-
 
     //!
     //! \brief EngineTimer::run_trigger_timer
     //! Timer that runs repeatedly and notifies observer after each timeout
     //! \param timeout_ms
     //!
-    void EngineTimer::run_trigger_timer(uint32_t timeout_ms)
+    void
+    EngineTimer::run_trigger_timer(uint32_t timeout_ms)
     {
         std::chrono::steady_clock::time_point tp_begin = std::chrono::steady_clock::now();
         uint32_t adjusted_timeout_ms = timeout_ms;
@@ -171,21 +191,18 @@ namespace hek_tutorials
         while (m_continue_timer.load()) {
             //! lock mutex => check predicate => IF predicate == false => wait ELSE continue program
             std::unique_lock<std::mutex> lock(m_mutex);
-            if (m_timer_condition.wait_for(lock,
-                                           std::chrono::milliseconds(adjusted_timeout_ms),
-                                           [this]{return (!m_continue_timer.load());})) {
+            if (m_timer_condition.wait_for(lock, std::chrono::milliseconds(adjusted_timeout_ms),
+                                           [this] { return (!m_continue_timer.load()); })) {
                 // m_continue_timer == false => Timer got interrupted
                 SLLog::log_info("EngineTimer::run_trigger_timer - timer requested to stop, terminating thread");
                 return;
             }
 
-            lock.unlock();
-
             // Timeout: notify subscriber
             std::lock_guard<std::mutex> lck(m_timeout_callback_mutex);
-            if (m_timeout_callback) { m_timeout_callback(); }
-
-            lock.lock();
+            if (m_timeout_callback) {
+                m_timeout_callback();
+            }
 
             auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - tp_begin).count();
 

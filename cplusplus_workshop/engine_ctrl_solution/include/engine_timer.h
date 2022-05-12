@@ -54,15 +54,16 @@ namespace hek_tutorials
 
         void set_timer_callback(timeout_callback_t callback);
         void unset_timer_callback();
-        void start_timer(uint32_t timeout_ms,
-                         bool repeat = false);
+
+        void req_timer_start(uint32_t timeout_ms, bool repeat = false);
+        void req_timer_stop();
+
+       private:
+        void start_timer(uint32_t timeout_ms, bool repeat = false);
         void stop_timer();
 
-    private:
-        void async_start_timer(uint32_t timeout_ms,
-                               bool repeat = false);
-
-        void async_stop_timer();
+        void req_timer_start_from_callback(uint32_t timeout_ms, bool repeat = false);
+        void req_timer_stop_from_callback();
 
         // Timer that runs once
         void run_timer(uint32_t timeout_ms);
@@ -70,10 +71,10 @@ namespace hek_tutorials
         // Timer that runs continuously and notifies observer after each run
         void run_trigger_timer(uint32_t timeout_ms);
 
-    private:
+       private:
         std::atomic_bool m_continue_timer;
         std::thread m_handler_thread;
-        std::mutex m_mutex;        
+        std::mutex m_mutex;
         std::mutex m_timeout_callback_mutex;
         timeout_callback_t m_timeout_callback;
         std::condition_variable m_timer_condition;
