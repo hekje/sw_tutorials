@@ -22,6 +22,7 @@ find_package(ament_cmake REQUIRED)
 # find_package(<dependency> REQUIRED)
 
 find_package(rclcpp REQUIRED)
+find_package(my_custom_msgs REQUIRED)
 
 
 include_directories(include)
@@ -34,7 +35,7 @@ add_executable(wrong_timer
 )
 
 
-ament_target_dependencies(wrong_timer rclcpp)
+ament_target_dependencies(wrong_timer rclcpp my_custom_msgs)
 
 target_link_libraries(wrong_timer
     )
